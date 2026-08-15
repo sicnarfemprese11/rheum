@@ -1,0 +1,15 @@
+---
+- name: Create RHCSA exam files
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Create rhexam1.txt
+      ansible.builtin.file:
+        path: /rhexam1.txt
+        state: touch
+
+    - name: Create rhexam2.txt
+      ansible.builtin.file:
+        path: /rhexam2.txt
+        state: touch
