@@ -1,0 +1,48 @@
+---
+- name: Configure Orchard as Web Server
+  hosts: orchard
+  become: true
+
+  tasks:
+
+    - name: Mount RHEL DVD to /mnt
+      ansible.posix.mount:
+        path: /mnt
+        src: /dev/sr0
+        fstype: iso9660
+        opts: ro
+        state: mounted
+
+    - name: Create local BaseOS repository
+      ansible.builtin.yum_repository:
+        name: rhel-baseos
+        description: Local RHEL BaseOS Repository
+        baseurl: file:///mnt/BaseOS
+        enabled: true
+        gpgcheck: false
+
+    - name: Create local AppStream repository
+      ansible.builtin.yum_repository:
+        name: rhel-appstream
+        description: Local RHEL AppStream Repository
+        baseurl: file:///mnt/AppStream
+        enabled: true
+        gpgcheck: false
+
+    - name: Install Apache HTTP server
+      ansible.builtin.dnf:
+        name: httpd
+        state: present
+
+    - name: Allow HTTP service through firewall
+      ansible.posix.firewalld:
+        service: http
+        permanent: true
+        immediate: true
+        state: enabled
+
+    - name: Start and enable Apache
+      ansible.builtin.systemd:
+        name: httpd
+        state: started
+        enabled: true
