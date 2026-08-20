@@ -1,0 +1,36 @@
+---
+- name: Configure network bonding
+  hosts: rhel_servers
+  become: yes
+
+  tasks:
+
+    - name: Create bond0
+      community.general.nmcli:
+        type: bond
+        conn_name: bond0
+        ifname: bond0
+        mode: active-backup
+        miimon: 100
+        state: present
+
+    - name: Add enp0s8 to bond0
+      community.general.nmcli:
+        type: ethernet
+        conn_name: bond0-slave1
+        ifname: enp0s8
+        master: bond0
+        state: present
+
+    - name: Add enp0s9 to bond0
+      community.general.nmcli:
+        type: ethernet
+        conn_name: bond0-slave2
+        ifname: enp0s9
+        master: bond0
+        state: present
+
+    - name: Bring bond0 up
+      community.general.nmcli:
+        conn_name: bond0
+        state: up
