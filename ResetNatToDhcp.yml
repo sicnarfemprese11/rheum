@@ -1,0 +1,14 @@
+---
+- name: Reset NAT interface to DHCP
+  hosts: orchard
+  become: true
+
+  tasks:
+
+    - name: Configure enp0s8 for DHCP
+      community.general.nmcli:
+        conn_name: enp0s8
+        ifname: enp0s8
+        type: ethernet
+        method4: auto
+        state: present
