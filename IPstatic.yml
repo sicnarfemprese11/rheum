@@ -1,0 +1,28 @@
+---
+- name: Configure enp0s8 with Static IP
+  hosts: orchard
+  become: true
+
+  tasks:
+
+    - name: Configure static IP on enp0s8
+      ansible.builtin.command:
+        cmd: >
+          nmcli connection modify enp0s8
+          ipv4.method manual
+          ipv4.addresses 10.0.3.15/24
+          ipv4.gateway 10.0.3.2
+          ipv4.dns "10.0.3.2"
+
+    - name: Bring enp0s8 connection up
+      ansible.builtin.command:
+        cmd: nmcli connection up enp0s8
+
+    - name: Verify NetworkManager configuration
+      ansible.builtin.command:
+        cmd: nmcli connection show enp0s8
+      register: network_config
+
+    - name: Display network configuration
+      ansible.builtin.debug:
+        var: network_config.stdout
