@@ -1,0 +1,16 @@
+---
+- name: Configure static IP on NAT interface
+  hosts: orchard
+  become: true
+
+  tasks:
+
+    - name: Configure enp0s8 with static IP
+      community.general.nmcli:
+        conn_name: enp0s8
+        ifname: enp0s8
+        type: ethernet
+        method4: manual
+        ip4: 10.0.3.15/24
+        gw4: 10.0.3.2
+        state: present
