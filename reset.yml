@@ -1,0 +1,27 @@
+---
+- name: Reset enp0s8 to DHCP
+  hosts: orchard
+  become: true
+
+  tasks:
+
+    - name: Configure enp0s8 for DHCP
+      ansible.builtin.command:
+        cmd: >
+          nmcli connection modify enp0s8
+          ipv4.method auto
+          ipv4.addresses ""
+          ipv4.gateway ""
+
+    - name: Bring enp0s8 connection up
+      ansible.builtin.command:
+        cmd: nmcli connection up enp0s8
+
+    - name: Verify DHCP configuration
+      ansible.builtin.command:
+        cmd: nmcli connection show enp0s8
+      register: network_config
+
+    - name: Display configuration
+      ansible.builtin.debug:
+        var: network_config.stdout
