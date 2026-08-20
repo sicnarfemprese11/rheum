@@ -1,6 +1,6 @@
 ---
 - name: Configure network bonding
-  hosts: rhel_servers
+  hosts: bond0
   become: yes
 
   tasks:
