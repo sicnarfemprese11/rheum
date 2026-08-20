@@ -1,0 +1,22 @@
+---
+- name: Configure network bonding
+  hosts: rhel_servers
+  become: yes
+
+  tasks:
+
+    - name: Create bond0
+      ansible.builtin.command:
+        cmd: nmcli connection add type bond con-name bond0 ifname bond0 bond.options "mode=active-backup,miimon=100"
+
+    - name: Add enp0s8 to bond0
+      ansible.builtin.command:
+        cmd: nmcli connection add type ethernet con-name bond0-slave1 ifname enp0s8 master bond0
+
+    - name: Add enp0s9 to bond0
+      ansible.builtin.command:
+        cmd: nmcli connection add type ethernet con-name bond0-slave2 ifname enp0s9 master bond0
+
+    - name: Bring bond0 up
+      ansible.builtin.command:
+        cmd: nmcli connection up bond0
