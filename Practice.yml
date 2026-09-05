@@ -64,8 +64,8 @@
     # QUESTION 6: CONFIGURE HTTP SERVICE
     # ----------------------------------------------------
 
-    - name: Ensure Apache service is enabled and started
-      ansible.builtin.systemd_2_0:
+   - name: Ensure Apache service is enabled and started
+      ansible.builtin.systemd: # <-- Fixed here
         name: httpd
         enabled: true
         state: started
