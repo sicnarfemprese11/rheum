@@ -20,7 +20,7 @@
     - name: Mount the RHEL Optical Drive (sr0)
       ansible.posix.mount:
         path: "{{ mount_point }}"
-        src: "/dev/sr0"                   # <-- Changed to mount the drive directly
+        src: "/dev/sr0"
         fstype: iso9660
         opts: ro
         state: mounted
@@ -44,7 +44,7 @@
         gpgkey: "file://{{ mount_point }}/RPM-GPG-KEY-redhat-release"
 
     - name: Clean package manager cache and verify repository
-      ansible.builtin.command: dnf clean all && dnf repolist
+      ansible.builtin.shell: dnf clean all && dnf repolist     # <-- Changed module to builtin.shell
       register: repo_check
       changed_when: false
 
