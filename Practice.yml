@@ -3,7 +3,6 @@
   hosts: jurong
   become: true
   vars:
-    iso_path: "/actual/path/to/your/real-rhel-dvd.iso"  # <-- ONLY replace inside these quotes
     mount_point: "/mnt/rhel_iso"
     web_page_content: "<h1>Server: jurong</h1>"
 
@@ -18,12 +17,12 @@
         state: directory
         mode: '0755'
 
-    - name: Mount the RHEL ISO
+    - name: Mount the RHEL Optical Drive (sr0)
       ansible.posix.mount:
         path: "{{ mount_point }}"
-        src: "{{ iso_path }}"
+        src: "/dev/sr0"                   # <-- Changed to mount the drive directly
         fstype: iso9660
-        opts: ro,loop
+        opts: ro
         state: mounted
 
     - name: Configure local DNF/YUM repository for BaseOS
