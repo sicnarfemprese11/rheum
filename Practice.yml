@@ -1,0 +1,97 @@
+---
+- name: Configure Local Repository and Apache Web Server on Jurong
+  hosts: jurong
+  become: true
+  vars:
+    iso_path: "/path/to/rhel-dvd.iso"  # Update this to the actual path of your ISO file
+    mount_point: "/mnt/rhel_iso"
+    web_page_content: "<h1>Server: jurong</h1>"
+
+  tasks:
+    # ----------------------------------------------------
+    # QUESTION 5: LOCAL REPOSITORY & APACHE INSTALLATION
+    # ----------------------------------------------------
+
+    - name: Create mount point directory
+      ansible.builtin.file:
+        path: "{{ mount_point }}"
+        state: directory
+        mode: '0755'
+
+    - name: Mount the RHEL ISO
+      ansible.posix.mount:
+        path: "{{ mount_point }}"
+        src: "{{ iso_path }}"
+        fstype: iso9660
+        opts: ro,loop
+        state: mounted
+
+    - name: Configure local DNF/YUM repository for BaseOS
+      ansible.builtin.yum_repository:
+        name: local-baseos
+        description: RHEL Local Repository - BaseOS
+        baseurl: "file://{{ mount_point }}/BaseOS"
+        enabled: true
+        gpgcheck: true
+        gpgkey: "file://{{ mount_point }}/RPM-GPG-KEY-redhat-release"
+
+    - name: Configure local DNF/YUM repository for AppStream
+      ansible.builtin.yum_repository:
+        name: local-appstream
+        description: RHEL Local Repository - AppStream
+        baseurl: "file://{{ mount_point }}/AppStream"
+        enabled: true
+        gpgcheck: true
+        gpgkey: "file://{{ mount_point }}/RPM-GPG-KEY-redhat-release"
+
+    - name: Clean package manager cache and verify repository
+      ansible.builtin.command: dnf clean all && dnf repolist
+      register: repo_check
+      changed_when: false
+
+    - name: Display available repositories
+      ansible.builtin.debug:
+        var: repo_check.stdout_lines
+
+    - name: Install Apache HTTP Server using only the local repository
+      ansible.builtin.dnf:
+        name: httpd
+        state: present
+        disablerepo: "*"
+        enablerepo: "local-*"
+
+    # ----------------------------------------------------
+    # QUESTION 6: CONFIGURE HTTP SERVICE
+    # ----------------------------------------------------
+
+    - name: Ensure Apache service is enabled and started
+      ansible.builtin.systemd_2_0:
+        name: httpd
+        enabled: true
+        state: started
+      register: httpd_status
+
+    - name: Verify Apache service status
+      ansible.builtin.debug:
+        msg: "Apache status is {{ httpd_status.status.ActiveState }}"
+
+    - name: Configure firewall to permit HTTP traffic
+      ansible.posix.firewalld:
+        service: http
+        permanent: true
+        state: enabled
+        immediate: true
+
+    - name: Create the simple web page
+      ansible.builtin.copy:
+        content: "{{ web_page_content }}"
+        dest: /var/www/html/index.html
+        owner: apache
+        group: apache
+        mode: '0644'
+
+    - name: Verify TCP port 80 is accessible locally
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: 80
+        timeout: 5
