@@ -1,0 +1,136 @@
+---
+- name: Configure Local Repository and Apache Web Calculator on Jurong
+  hosts: jurong
+  become: true
+  vars:
+    mount_point: "/mnt/rhel_iso"
+
+  tasks:
+    # ----------------------------------------------------
+    # QUESTION 5: LOCAL REPOSITORY & APACHE INSTALLATION
+    # ----------------------------------------------------
+
+    - name: Create mount point directory
+      ansible.builtin.file:
+        path: "{{ mount_point }}"
+        state: directory
+        mode: '0755'
+
+    - name: Mount the RHEL Optical Drive (sr0)
+      ansible.posix.mount:
+        path: "{{ mount_point }}"
+        src: "/dev/sr0"
+        fstype: iso9660
+        opts: ro
+        state: mounted
+
+    - name: Configure local DNF/YUM repository for BaseOS
+      ansible.builtin.yum_repository:
+        name: local-baseos
+        description: RHEL Local Repository - BaseOS
+        baseurl: "file://{{ mount_point }}/BaseOS"
+        enabled: true
+        gpgcheck: true
+        gpgkey: "file://{{ mount_point }}/RPM-GPG-KEY-redhat-release"
+
+    - name: Configure local DNF/YUM repository for AppStream
+      ansible.builtin.yum_repository:
+        name: local-appstream
+        description: RHEL Local Repository - AppStream
+        baseurl: "file://{{ mount_point }}/AppStream"
+        enabled: true
+        gpgcheck: true
+        gpgkey: "file://{{ mount_point }}/RPM-GPG-KEY-redhat-release"
+
+    - name: Clean package manager cache and verify repository
+      ansible.builtin.shell: dnf clean all && dnf repolist
+      register: repo_check
+      changed_when: false
+
+    - name: Install Apache HTTP Server using only the local repository
+      ansible.builtin.dnf:
+        name: httpd
+        state: present
+        disablerepo: "*"
+        enablerepo: "local-*"
+
+    # ----------------------------------------------------
+    # QUESTION 6: CONFIGURE HTTP SERVICE & CALCULATOR UI
+    # ----------------------------------------------------
+
+    - name: Ensure Apache service is enabled and started
+      ansible.builtin.systemd:
+        name: httpd
+        enabled: true
+        state: started
+
+    - name: Configure firewall to permit HTTP traffic
+      ansible.posix.firewalld:
+        service: http
+        permanent: true
+        state: enabled
+        immediate: true
+
+    - name: Deploy the full Interactive Web Calculator UI
+      ansible.builtin.copy:
+        dest: /var/www/html/index.html
+        owner: apache
+        group: apache
+        mode: '0644'
+        content: |
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Server: jurong - Web Calculator</title>
+              <style>
+                  body { font-family: 'Segoe UI', Arial, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #eef2f3; }
+                  h1 { color: #2c3e50; margin-bottom: 5px; font-size: 2.2rem; }
+                  h3 { color: #7f8c8d; margin-top: 0; margin-bottom: 20px; font-weight: 400; }
+                  .calculator { background: #2c3e50; padding: 20px; border-radius: 15px; box-shadow: 0px 8px 20px rgba(0,0,0,0.25); width: 280px; }
+                  #display { width: 100%; height: 55px; font-size: 1.8rem; text-align: right; margin-bottom: 15px; padding: 8px; box-sizing: border-box; border: none; background: #1a252f; color: #2ecc71; border-radius: 8px; }
+                  .buttons { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+                  button { padding: 16px; font-size: 1.2rem; border: none; background: #34495e; color: white; cursor: pointer; border-radius: 6px; font-weight: bold; transition: background 0.1s; }
+                  button:hover { background: #415b76; }
+                  button.operator { background: #e67e22; }
+                  button.operator:hover { background: #d35400; }
+                  button.clear { background: #e74c3c; }
+                  button.clear:hover { background: #c0392b; }
+                  button.equal { background: #2ecc71; grid-row: span 2; height: 100%; }
+                  button.equal:hover { background: #27ae60; }
+              </style>
+          </head>
+          <body>
+              <h1>Server: jurong</h1>
+              <h3>Interactive Web Calculator</h3>
+              <div class="calculator">
+                  <input type="text" id="display" readonly placeholder="0">
+                  <div class="buttons">
+                      <button class="clear" onclick="document.getElementById('display').value=''">C</button>
+                      <button class="operator" onclick="document.getElementById('display').value+='/'">/</button>
+                      <button class="operator" onclick="document.getElementById('display').value+='*'">*</button>
+                      <button class="operator" onclick="document.getElementById('display').value+='-'">-</button>
+                      <button onclick="document.getElementById('display').value+='7'">7</button>
+                      <button onclick="document.getElementById('display').value+='8'">8</button>
+                      <button onclick="document.getElementById('display').value+='9'">9</button>
+                      <button class="operator" onclick="document.getElementById('display').value+='+'">+</button>
+                      <button onclick="document.getElementById('display').value+='4'">4</button>
+                      <button onclick="document.getElementById('display').value+='5'">5</button>
+                      <button onclick="document.getElementById('display').value+='6'">6</button>
+                      <button class="equal" onclick="try{document.getElementById('display').value=eval(document.getElementById('display').value)}catch(e){document.getElementById('display').value='Error'}">=</button>
+                      <button onclick="document.getElementById('display').value+='1'">1</button>
+                      <button onclick="document.getElementById('display').value+='2'">2</button>
+                      <button onclick="document.getElementById('display').value+='3'">3</button>
+                      <button onclick="document.getElementById('display').value+='0'" style="grid-column: span 2;">0</button>
+                      <button onclick="document.getElementById('display').value+='.'">.</button>
+                  </div>
+              </div>
+          </body>
+          </html>
+
+    - name: Verify TCP port 80 is accessible locally
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: 80
+        timeout: 5
