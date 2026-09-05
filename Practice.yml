@@ -1,5 +1,5 @@
 ---
-- name: Configure Local Repository and Apache Web Server on Jurong
+- name: jurong
   hosts: jurong
   become: true
   vars:
