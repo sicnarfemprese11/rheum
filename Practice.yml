@@ -1,5 +1,5 @@
 ---
-- name: jurong
+- name: Configure Local Repository and Apache Web Server on Jurong
   hosts: jurong
   become: true
   vars:
@@ -64,8 +64,8 @@
     # QUESTION 6: CONFIGURE HTTP SERVICE
     # ----------------------------------------------------
 
-   - name: Ensure Apache service is enabled and started
-      ansible.builtin.systemd: # <-- Fixed here
+    - name: Ensure Apache service is enabled and started
+      ansible.builtin.systemd:
         name: httpd
         enabled: true
         state: started
@@ -73,7 +73,7 @@
 
     - name: Verify Apache service status
       ansible.builtin.debug:
-        msg: "Apache status is {{ httpd_status.status.ActiveState }}"
+        msg: "Apache status is {{ httpd_status.status.ActiveState | default('unknown') }}"
 
     - name: Configure firewall to permit HTTP traffic
       ansible.posix.firewalld:
