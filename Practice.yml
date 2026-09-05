@@ -3,9 +3,9 @@
   hosts: jurong
   become: true
   vars:
-    iso_path: "/path/to/rhel-dvd.iso"  # Update this to the actual path of your ISO file
+    iso_path: "/actual/path/to/your/real-rhel-dvd.iso"  # <--- Change this to your real path!
     mount_point: "/mnt/rhel_iso"
-    web_page_content: "<h1>Server: jurong</h1>"
+    web_page_content: "<h1>Server: jurong</h1>
 
   tasks:
     # ----------------------------------------------------
