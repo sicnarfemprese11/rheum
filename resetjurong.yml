@@ -1,0 +1,107 @@
+---
+- name: Reset Jurong VM from Web Server Configuration
+  hosts: jurong
+  become: true
+
+  vars:
+    mount_point: "/mnt/rhel_iso"
+
+  tasks:
+
+    # ----------------------------------------------------
+    # REMOVE APACHE WEB SERVER
+    # ----------------------------------------------------
+
+    - name: Stop Apache
+      ansible.builtin.systemd:
+        name: httpd
+        state: stopped
+      failed_when: false
+
+    - name: Disable Apache at boot
+      ansible.builtin.systemd:
+        name: httpd
+        enabled: false
+      failed_when: false
+
+    - name: Remove Apache HTTP Server
+      ansible.builtin.dnf:
+        name: httpd
+        state: absent
+
+    # ----------------------------------------------------
+    # REMOVE WEB PAGE
+    # ----------------------------------------------------
+
+    - name: Remove calculator web page
+      ansible.builtin.file:
+        path: /var/www/html/index.html
+        state: absent
+
+    # ----------------------------------------------------
+    # REMOVE HTTP FIREWALL RULE
+    # ----------------------------------------------------
+
+    - name: Remove HTTP service from firewall
+      ansible.posix.firewalld:
+        service: http
+        permanent: true
+        state: disabled
+        immediate: true
+      failed_when: false
+
+    # ----------------------------------------------------
+    # REMOVE LOCAL REPOSITORIES
+    # ----------------------------------------------------
+
+    - name: Remove local BaseOS repository
+      ansible.builtin.yum_repository:
+        name: local-baseos
+        state: absent
+
+    - name: Remove local AppStream repository
+      ansible.builtin.yum_repository:
+        name: local-appstream
+        state: absent
+
+    # ----------------------------------------------------
+    # UNMOUNT RHEL ISO
+    # ----------------------------------------------------
+
+    - name: Unmount RHEL ISO
+      ansible.posix.mount:
+        path: "{{ mount_point }}"
+        state: unmounted
+
+    # ----------------------------------------------------
+    # REMOVE MOUNT POINT
+    # ----------------------------------------------------
+
+    - name: Remove ISO mount directory
+      ansible.builtin.file:
+        path: "{{ mount_point }}"
+        state: absent
+
+    # ----------------------------------------------------
+    # REFRESH DNF
+    # ----------------------------------------------------
+
+    - name: Clean DNF cache
+      ansible.builtin.command:
+        cmd: dnf clean all
+      changed_when: false
+
+    # ----------------------------------------------------
+    # VERIFY
+    # ----------------------------------------------------
+
+    - name: Check that Apache is no longer installed
+      ansible.builtin.command:
+        cmd: rpm -q httpd
+      register: httpd_check
+      failed_when: false
+      changed_when: false
+
+    - name: Display reset result
+      ansible.builtin.debug:
+        msg: "Jurong has been cleaned up and is no longer configured as a web server."
